@@ -148,6 +148,10 @@ template CheckBitLength(b) {
     signal output out;
 
     // TODO
+    component lt  = LessThan(b);
+    lt.in[0] <== in;
+    lt.in[1] <== 1<<b;
+    out <== lt.out;
 }
 
 /*
@@ -197,6 +201,13 @@ template RightShift(b, shift) {
     signal output y;
 
     // TODO
+    component n2b = Num2Bits(b);
+    n2b.in <== x;
+    component b2n = Bits2Num(b-shift);
+    for (var i=0;i<(b-shift);i++){
+        b2n.bits[i] <== n2b.bits[i+shift];
+    }
+    y <== b2n.out;
 }
 
 /*
