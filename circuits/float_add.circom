@@ -270,6 +270,17 @@ template LeftShift(shift_bound) {
     signal output y;
 
     // TODO
+    y <-- x<<shift;
+
+
+    component lt = LessThan(8);
+    lt.in[0] <== shift;
+    lt.in[1] <== shift_bound;
+    component ite = IfThenElse();
+    ite.cond <== skip_checks;
+    ite.L <== 1;
+    ite.R <== lt.out;
+    ite.out === 1;
 }
 
 /*
@@ -279,12 +290,67 @@ template LeftShift(shift_bound) {
  * Enforces that `in` is non-zero as MSNZB(0) is undefined.
  * If `skip_checks` = 1, then we don't care about the output and the non-zero constraint is not enforced.
  */
+
+function log2(a) {
+    if (a==0) {
+        return 0;
+    }
+    var n = 1;
+    var r = 0;
+    while (n<=a) {
+        r++;
+        n *= 2;
+    }
+    return r-1;
+}
+
 template MSNZB(b) {
     signal input in;
     signal input skip_checks;
     signal output one_hot[b];
 
     // TODO
+    // form witness
+    var x = log2(in);
+    for (var i=0;i<b;i++){
+        one_hot[i] <-- i == x ? 1:0;
+    }
+
+    // constrain nonzero
+    component iz = IsZero();
+    iz.in <== in;
+    
+    // constrain to a single item
+    var s = 0;
+    for(var i=0;i<b;i++){
+        s+=one_hot[i];
+        one_hot[i]*(1-one_hot[i])===0; // binary constraint
+    }
+    component eq = IsEqual();
+    eq.in[0] <== s;
+    eq.in[1] <== 1;
+
+    
+    // constrain to 2*v > in > v
+    component b2n = Bits2Num(b);
+    for( var i=0;i<b;i++){
+        b2n.bits[i] <== one_hot[i];
+    }
+    component lta = LessThan(b);
+    lta.in[0] <== b2n.out-1;
+    lta.in[1] <== in;
+
+    signal z <== b2n.out * 2;
+    component ltb = LessThan(b);
+    ltb.in[0] <== in;
+    ltb.in[1] <== z;
+    
+    component ite = IfThenElse();
+    ite.cond <== skip_checks;
+    ite.L <== 3;
+    ite.R <== eq.out + lta.out + ltb.out;
+    
+    ite.out === 3;
 }
 
 /*
