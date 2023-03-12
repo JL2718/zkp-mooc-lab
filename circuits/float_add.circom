@@ -338,6 +338,24 @@ function log2(a) {
     return r-1;
 }
 
+template Log2(){
+    signal input in;
+    signal output out;
+    out <-- log2(in);
+    component exp = Exp();
+    exp.b <== 2;
+    exp.x <== out;
+    component lta = LessThan(252);
+    lta.in[0] <== out;
+    lta.in[1] <== exp.out;
+    lta.out === 0;
+
+    component ltb = LessThan(252);
+    ltb.in[0] <== out;
+    ltb.in[1] <== 2*exp.out;
+    ltb.out === 1;
+}
+
 template MSNZB(b) {
     signal input in;
     signal input skip_checks;
