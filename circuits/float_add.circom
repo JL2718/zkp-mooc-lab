@@ -493,8 +493,16 @@ template FloatAdd(k, p) {
     ltd.in[1] <== d;
     log("ltd.out",ltd.out);
 
+    component iz = IsZero();
+    iz.in <== swe.outL;
+
+    component or = OR();
+    or.a <== ltd.out;
+    or.b <== iz.out;
+    log("or",or.out);
+
     component itd = IfThenElse();
-    itd.cond <== ltd.out;
+    itd.cond <== or.out;
     itd.L <== 0;
     itd.R <== d;
     log("itd.out",itd.out);
@@ -502,13 +510,13 @@ template FloatAdd(k, p) {
     component shl = LeftShift(254);
     shl.x <== swm.outL;
     shl.shift <== itd.out;
-    shl.skip_checks <== ltd.out; 
+    shl.skip_checks <== or.out; 
     log("shl.y",shl.y);
 
     component norm  = Normalize(k,p,2*p+1);
     norm.e <== swe.outR;
     norm.m <== swm.outR + shl.y;
-    norm.skip_checks <== ltd.out;
+    norm.skip_checks <== or.out;
     log("raw",norm.e,norm.m);
     log("normed",norm.e_out,norm.m_out);
 
@@ -518,11 +526,11 @@ template FloatAdd(k, p) {
     log("rounded",rac.e_out,rac.m_out);
 
     component ite = IfThenElse();
-    ite.cond <== ltd.out;
+    ite.cond <== or.out;
     ite.R <== rac.e_out;
     ite.L <== swe.outL;
     component itm = IfThenElse();
-    itm.cond <== ltd.out;
+    itm.cond <== or.out;
     itm.R <== rac.m_out;
     itm.L <== swm.outL;
 
