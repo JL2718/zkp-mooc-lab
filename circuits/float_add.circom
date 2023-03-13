@@ -64,7 +64,7 @@ template Switcher() {
 template Num2Bits(b) {
     signal input in;
     signal output bits[b];
-
+    //log("num2bits: in=",in);
     for (var i = 0; i < b; i++) {
         bits[i] <-- (in >> i) & 1;
         bits[i] * (1 - bits[i]) === 0;
@@ -301,7 +301,6 @@ template LeftShift(shift_bound) {
     signal input skip_checks;
     signal output y;
 
-    // TODO
     component exp = Exp();
     exp.b <== 2;
     exp.x <== shift;
@@ -389,8 +388,8 @@ template MSNZB(b) {
         b2n.bits[i] <== one_hot[i];
     }
     component lta = LessThan(b);
-    lta.in[0] <== b2n.out-1;
-    lta.in[1] <== in;
+    lta.in[0] <== b2n.out;
+    lta.in[1] <== in+1;
 
     signal z <== b2n.out * 2;
     component ltb = LessThan(b);
@@ -401,7 +400,6 @@ template MSNZB(b) {
     ite.cond <== skip_checks;
     ite.L <== 3;
     ite.R <== eq.out + lta.out + ltb.out;
-    
     ite.out === 3;
 }
 
@@ -475,32 +473,48 @@ template FloatAdd(k, p) {
     swm.sel <== lt.out;
     swm.L <== m[0];
     swm.R <== m[1];
+    log("larger",swe.outL,swm.outL);
+    log("smaller",swe.outR,swm.outR);
 
     var d = swe.outL-swe.outR;
     log(d);
     component ltd = LessThan(k);
-    ltd.in[0] <== d;
-    ltd.in[1] <== p;
+    ltd.in[0] <== p+1;
+    ltd.in[1] <== d;
+    log("ltd.out",ltd.out);
+
+    component itd = IfThenElse();
+    itd.cond <== ltd.out;
+    itd.L <== 0;
+    itd.R <== d;
+    log("itd.out",itd.out);
 
     component shl = LeftShift(254);
     shl.x <== swm.outL;
-    shl.shift <== d;
-    shl.skip_checks <== ltd.out;    
+    shl.shift <== itd.out;
+    shl.skip_checks <== ltd.out; 
+    log("shl.y",shl.y);
+
     component norm  = Normalize(k,p,2*p+1);
     norm.e <== swe.outR;
     norm.m <== swm.outR + shl.y;
     norm.skip_checks <== ltd.out;
-    log(norm.e,norm.m);
-    log(norm.e_out,norm.m_out);
+    log("raw",norm.e,norm.m);
+    log("normed",norm.e_out,norm.m_out);
+
+    component rac = RoundAndCheck(k,p,2*p+1);
+    rac.e <== norm.e_out;
+    rac.m <== norm.m_out;
+    log("rounded",rac.e_out,rac.m_out);
 
     component ite = IfThenElse();
     ite.cond <== ltd.out;
-    ite.L <== norm.e_out;
-    ite.R <== swe.outL;
+    ite.R <== rac.e_out;
+    ite.L <== swe.outL;
     component itm = IfThenElse();
     itm.cond <== ltd.out;
-    itm.L <== norm.m_out;
-    itm.R <== swm.outL;
+    itm.R <== rac.m_out;
+    itm.L <== swm.outL;
 
     e_out <== ite.out;
     m_out <== itm.out;
