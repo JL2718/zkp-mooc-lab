@@ -148,10 +148,20 @@ template CheckBitLength(b) {
     signal output out;
 
     // TODO
-    component lt  = LessThan(b);
-    lt.in[0] <== in;
-    lt.in[1] <== 1<<b;
-    out <== lt.out;
+    log("CBL",b,in);
+    signal bits[b];
+    for (var i = 0; i < b; i++) {
+        bits[i] <-- (in >> i) & 1;
+        bits[i] * (1 - bits[i]) === 0;
+    }
+    var sum_of_bits = 0;
+    for (var i = 0; i < b; i++) {
+        sum_of_bits += (2 ** i) * bits[i];
+    }
+    component eq = IsEqual();
+    eq.in[0] <== sum_of_bits;
+    eq.in[1] <== in;
+    out <== eq.out;
 }
 
 /*
