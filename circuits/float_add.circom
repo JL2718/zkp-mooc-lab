@@ -457,4 +457,53 @@ template FloatAdd(k, p) {
     signal output m_out;
 
     // TODO
+    component cwf0 = CheckWellFormedness(k,p);
+    component cwf1 = CheckWellFormedness(k,p);
+    cwf0.e <== e[0];
+    cwf0.m <== m[0];
+    cwf1.e <== e[1];
+    cwf1.m <== m[1];
+
+    component lt = LessThan(k);
+    lt.in[0] <== e[0];
+    lt.in[1] <== e[1];
+    component swe = Switcher();
+    swe.sel <== lt.out;
+    swe.L <== e[0];
+    swe.R <== e[1];
+    component swm = Switcher();
+    swm.sel <== lt.out;
+    swm.L <== m[0];
+    swm.R <== m[1];
+
+    var d = swe.outL-swe.outR;
+    log(d);
+    component ltd = LessThan(k);
+    ltd.in[0] <== d;
+    ltd.in[1] <== p;
+
+    component shl = LeftShift(254);
+    shl.x <== swm.outL;
+    shl.shift <== d;
+    shl.skip_checks <== ltd.out;    
+    component norm  = Normalize(k,p,2*p+1);
+    norm.e <== swe.outR;
+    norm.m <== swm.outR + shl.y;
+    norm.skip_checks <== ltd.out;
+    log(norm.e,norm.m);
+    log(norm.e_out,norm.m_out);
+
+    component ite = IfThenElse();
+    ite.cond <== ltd.out;
+    ite.L <== norm.e_out;
+    ite.R <== swe.outL;
+    component itm = IfThenElse();
+    itm.cond <== ltd.out;
+    itm.L <== norm.m_out;
+    itm.R <== swm.outL;
+
+    e_out <== ite.out;
+    m_out <== itm.out;
+    log(e_out,m_out);
+
 }
