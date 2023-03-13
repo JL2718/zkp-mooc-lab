@@ -429,26 +429,18 @@ template Normalize(k, p, P) {
     assert(P > p);
 
     // TODO
-    //var l = log2(m);
-    //e_out <-- e+l-p;
-    //m_out <-- m<<(P-l);
-
     component msb = MSNZB(P+1);
     msb.in <== m;
     msb.skip_checks <== skip_checks;
 
     var m_acc = 0 ;
     var e_acc = 0 ; 
-    signal ma[P+1];
-    signal ea[P+1];
     for(var i=0;i<P+1;i++){
-        ma[i] <== m * msb.one_hot[i] * (1<<(P-i));
-        ea[i] <== msb.one_hot[i] * (e+i-p);
-        m_acc += ma[i];
-        e_acc += ea[i];
+        m_acc += msb.one_hot[i] * (1<<(P-i));
+        e_acc += msb.one_hot[i] * i; 
     }
-    m_out <== m_acc;
-    e_out <== e_acc;
+    m_out <== m * m_acc;
+    e_out <== e - p + e_acc;
 }
 
 /*
